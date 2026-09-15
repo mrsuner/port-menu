@@ -339,10 +339,12 @@ struct PortErrorStateView: View {
 // MARK: - Project Port Group
 
 struct ProjectPortGroupView: View {
+    @Environment(PortStore.self) private var store
     let group: ProjectPortGroup
     let showTopDivider: Bool
     let isCollapsed: Bool
     let toggleCollapsed: () -> Void
+    @State private var showKillConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -351,47 +353,54 @@ struct ProjectPortGroupView: View {
                     .padding(.horizontal, 16)
             }
 
-            Button(action: toggleCollapsed) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                        .frame(width: 10)
-
-                    Circle()
-                        .fill(.green)
-                        .frame(width: 6, height: 6)
-                        .offset(y: -1)
-
-                    Text(group.projectName)
-                        .font(.system(.body, weight: .medium))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-
-                    if !group.branch.isEmpty {
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.triangle.branch")
-                            Text(group.branch)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                        }
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    if group.entries.count > 1 {
-                        Text("\(group.entries.count) ports")
-                            .font(.caption)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Button(action: toggleCollapsed) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.tertiary)
+                            .frame(width: 10)
+
+                        Circle()
+                            .fill(.green)
+                            .frame(width: 6, height: 6)
+                            .offset(y: -1)
+
+                        Text(group.projectName)
+                            .font(.system(.body, weight: .medium))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+
+                        if !group.branch.isEmpty {
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrow.triangle.branch")
+                                Text(group.branch)
+                                    .lineLimit(1)
+                                    .truncationMode(.middle)
+                            }
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        if group.entries.count > 1 {
+                            Text("\(group.entries.count) ports")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityLabel("\(group.projectName), \(group.entries.count) ports")
+                .accessibilityHint(isCollapsed ? "Expand ports" : "Collapse ports")
+
+                HoverButton("Kill", role: .destructive) {
+                    showKillConfirmation = true
+                }
+                .accessibilityLabel("Kill all servers in \(group.projectName)")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("\(group.projectName), \(group.entries.count) ports")
-            .accessibilityHint(isCollapsed ? "Expand ports" : "Collapse ports")
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, 4)
@@ -402,6 +411,22 @@ struct ProjectPortGroupView: View {
                 }
             }
         }
+        .confirmationDialog(
+            "Kill servers in \(group.projectName)?",
+            isPresented: $showKillConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button(killConfirmationActionTitle, role: .destructive) {
+                store.killProcesses(inProjectWithIdentifier: group.id)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will stop \(group.entries.count) \(group.entries.count == 1 ? "server" : "servers") in this project.")
+        }
+    }
+
+    private var killConfirmationActionTitle: String {
+        "Kill \(group.entries.count) \(group.entries.count == 1 ? "Server" : "Servers")"
     }
 }
 

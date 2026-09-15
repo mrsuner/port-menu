@@ -544,6 +544,27 @@ struct DockerDisplayNameTests {
         #expect(store.entries.isEmpty)
     }
 
+    @Test @MainActor func killProjectProcessesOnlyRemovesThatProject() async throws {
+        let ports = [
+            ActivePort(port: 3000, pid: 99996, projectName: "web", projectIdentifier: "/work/web", branch: "", startTime: nil),
+            ActivePort(port: 5173, pid: 99995, projectName: "web", projectIdentifier: "/work/web", branch: "", startTime: nil),
+            ActivePort(port: 8000, pid: 99994, projectName: "api", projectIdentifier: "/work/api", branch: "", startTime: nil)
+        ]
+        let store = PortStore(scanner: FakePortScanner(ports: ports, delay: 0))
+
+        store.refresh()
+        try await Task.sleep(nanoseconds: 200_000_000)
+        #expect(store.entries.count == 3)
+
+        store.killProcesses(inProjectWithIdentifier: "/work/web")
+
+        #expect(store.entries.map(\.port) == [8000])
+
+        store.refresh()
+        try await Task.sleep(nanoseconds: 200_000_000)
+        #expect(store.entries.map(\.port) == [8000])
+    }
+
     @Test @MainActor func diagnosticsSnapshot() {
         let store = PortStore(scanner: FakePortScanner(ports: [], delay: 0))
         let snapshot = store.diagnosticsSnapshot
