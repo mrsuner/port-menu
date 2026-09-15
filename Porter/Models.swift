@@ -12,6 +12,8 @@ struct ActivePort: Identifiable, Equatable, Hashable, Sendable {
     let projectIdentifier: String
     let branch: String
     let startTime: Date?
+    /// The process's current physical memory footprint in bytes, when available.
+    let memoryBytes: UInt64?
 
     var url: URL {
         URL(string: "http://localhost:\(port)")!
@@ -23,7 +25,8 @@ struct ActivePort: Identifiable, Equatable, Hashable, Sendable {
         projectName: String,
         projectIdentifier: String? = nil,
         branch: String,
-        startTime: Date?
+        startTime: Date?,
+        memoryBytes: UInt64? = nil
     ) {
         self.id = "\(port)-\(pid)"
         self.port = port
@@ -33,7 +36,12 @@ struct ActivePort: Identifiable, Equatable, Hashable, Sendable {
         self.projectIdentifier = projectIdentifier ?? "name:\(projectName)"
         self.branch = branch
         self.startTime = startTime
+        self.memoryBytes = memoryBytes
     }
+}
+
+func formatMemory(bytes: UInt64) -> String {
+    ByteCountFormatter.string(fromByteCount: Int64(bytes), countStyle: .memory)
 }
 
 // MARK: - Project Port Group

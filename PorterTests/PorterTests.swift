@@ -1,3 +1,4 @@
+import Darwin
 import Testing
 import Foundation
 @testable import Port_Menu
@@ -164,6 +165,35 @@ struct ActivePortTests {
         let a = ActivePort(port: 3000, pid: 100, projectName: "test", branch: "main", startTime: time)
         let b = ActivePort(port: 3000, pid: 100, projectName: "test", branch: "main", startTime: time)
         #expect(a == b)
+    }
+
+    @Test func retainsOptionalMemoryUsage() {
+        let port = ActivePort(
+            port: 3000,
+            pid: 123,
+            projectName: "test",
+            branch: "main",
+            startTime: nil,
+            memoryBytes: 128 * 1_024 * 1_024
+        )
+
+        #expect(port.memoryBytes == 128 * 1_024 * 1_024)
+    }
+}
+
+// MARK: - Memory Formatter Tests
+
+struct MemoryFormatterTests {
+
+    @Test func formatsMemoryForDisplay() {
+        #expect(!formatMemory(bytes: 128 * 1_024 * 1_024).isEmpty)
+    }
+
+    @Test func readsCurrentProcessMemoryUsage() {
+        let memoryBytes = LivePortScanner.memoryUsage(for: getpid())
+
+        #expect(memoryBytes != nil)
+        #expect(memoryBytes ?? 0 > 0)
     }
 }
 

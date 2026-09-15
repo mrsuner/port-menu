@@ -425,6 +425,12 @@ struct PortRow: View {
 
                 Spacer()
 
+                if let memoryBytes = entry.memoryBytes {
+                    Text(formatMemory(bytes: memoryBytes))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+
                 if let start = entry.startTime {
                     Text(formatUptime(from: start))
                         .font(.caption)
