@@ -1,3 +1,4 @@
+import AppKit
 import ServiceManagement
 import Sparkle
 import SwiftUI
@@ -344,7 +345,6 @@ struct ProjectPortGroupView: View {
     let showTopDivider: Bool
     let isCollapsed: Bool
     let toggleCollapsed: () -> Void
-    @State private var showKillConfirmation = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -397,7 +397,7 @@ struct ProjectPortGroupView: View {
                 .accessibilityHint(isCollapsed ? "Expand ports" : "Collapse ports")
 
                 HoverButton("Kill", role: .destructive) {
-                    showKillConfirmation = true
+                    confirmAndKillGroup()
                 }
                 .accessibilityLabel("Kill all servers in \(group.projectName)")
             }
@@ -411,22 +411,18 @@ struct ProjectPortGroupView: View {
                 }
             }
         }
-        .confirmationDialog(
-            "Kill servers in \(group.projectName)?",
-            isPresented: $showKillConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(killConfirmationActionTitle, role: .destructive) {
-                store.killProcesses(inProjectWithIdentifier: group.id)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will stop \(group.entries.count) \(group.entries.count == 1 ? "server" : "servers") in this project.")
-        }
     }
 
-    private var killConfirmationActionTitle: String {
-        "Kill \(group.entries.count) \(group.entries.count == 1 ? "Server" : "Servers")"
+    private func confirmAndKillGroup() {
+        let alert = NSAlert()
+        alert.messageText = "Kill servers in \(group.projectName)?"
+        alert.informativeText = "This will stop \(group.entries.count) \(group.entries.count == 1 ? "server" : "servers") in this project."
+        alert.addButton(withTitle: "Kill \(group.entries.count) \(group.entries.count == 1 ? "Server" : "Servers")")
+        alert.addButton(withTitle: "Cancel")
+        alert.alertStyle = .warning
+
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        store.killProcesses(inProjectWithIdentifier: group.id)
     }
 }
 
