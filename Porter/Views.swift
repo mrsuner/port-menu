@@ -234,14 +234,30 @@ struct HeaderButtonStyle: ButtonStyle {
 
 struct PortEntryListView: View {
     @Environment(PortStore.self) private var store
+    @State private var collapsedProjectIDs: Set<String> = []
 
     var body: some View {
         let groups = store.entries.groupedByProject()
 
         ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
-            ProjectPortGroupView(group: group, showTopDivider: index > 0)
+            ProjectPortGroupView(
+                group: group,
+                showTopDivider: index > 0,
+                isCollapsed: collapsedProjectIDs.contains(group.id),
+                toggleCollapsed: { toggleCollapsed(group.id) }
+            )
         }
         .padding(.bottom, 6)
+    }
+
+    private func toggleCollapsed(_ projectID: String) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if collapsedProjectIDs.contains(projectID) {
+                collapsedProjectIDs.remove(projectID)
+            } else {
+                collapsedProjectIDs.insert(projectID)
+            }
+        }
     }
 }
 
@@ -325,6 +341,8 @@ struct PortErrorStateView: View {
 struct ProjectPortGroupView: View {
     let group: ProjectPortGroup
     let showTopDivider: Bool
+    let isCollapsed: Bool
+    let toggleCollapsed: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -333,42 +351,55 @@ struct ProjectPortGroupView: View {
                     .padding(.horizontal, 16)
             }
 
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Circle()
-                    .fill(.green)
-                    .frame(width: 6, height: 6)
-                    .offset(y: -1)
-
-                Text(group.projectName)
-                    .font(.system(.body, weight: .medium))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-
-                if !group.branch.isEmpty {
-                    HStack(spacing: 3) {
-                        Image(systemName: "arrow.triangle.branch")
-                        Text(group.branch)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-
-                Spacer()
-
-                if group.entries.count > 1 {
-                    Text("\(group.entries.count) ports")
-                        .font(.caption)
+            Button(action: toggleCollapsed) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.tertiary)
+                        .frame(width: 10)
+
+                    Circle()
+                        .fill(.green)
+                        .frame(width: 6, height: 6)
+                        .offset(y: -1)
+
+                    Text(group.projectName)
+                        .font(.system(.body, weight: .medium))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+
+                    if !group.branch.isEmpty {
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.triangle.branch")
+                            Text(group.branch)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    if group.entries.count > 1 {
+                        Text("\(group.entries.count) ports")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                 }
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(group.projectName), \(group.entries.count) ports")
+            .accessibilityHint(isCollapsed ? "Expand ports" : "Collapse ports")
             .padding(.horizontal, 16)
             .padding(.top, 8)
             .padding(.bottom, 4)
 
-            ForEach(group.entries) { entry in
-                PortRow(entry: entry)
+            if !isCollapsed {
+                ForEach(group.entries) { entry in
+                    PortRow(entry: entry)
+                }
             }
         }
     }
