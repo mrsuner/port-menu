@@ -236,8 +236,10 @@ struct PortEntryListView: View {
     @Environment(PortStore.self) private var store
 
     var body: some View {
-        ForEach(Array(store.entries.enumerated()), id: \.element.id) { index, entry in
-            PortRow(entry: entry, showTopDivider: index > 0)
+        let groups = store.entries.groupedByProject()
+
+        ForEach(Array(groups.enumerated()), id: \.element.id) { index, group in
+            ProjectPortGroupView(group: group, showTopDivider: index > 0)
         }
         .padding(.bottom, 6)
     }
@@ -318,14 +320,11 @@ struct PortErrorStateView: View {
     }
 }
 
-// MARK: - Port Row
+// MARK: - Project Port Group
 
-struct PortRow: View {
-    let entry: ActivePort
+struct ProjectPortGroupView: View {
+    let group: ProjectPortGroup
     let showTopDivider: Bool
-    @Environment(PortStore.self) private var store
-    @State private var isHovered = false
-    @State private var slidOut = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -334,55 +333,82 @@ struct PortRow: View {
                     .padding(.horizontal, 16)
             }
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Circle()
-                        .fill(.green)
-                        .frame(width: 6, height: 6)
-                        .offset(y: -1)
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Circle()
+                    .fill(.green)
+                    .frame(width: 6, height: 6)
+                    .offset(y: -1)
 
-                    Text(entry.projectName)
-                        .font(.system(.body, weight: .medium))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                Text(group.projectName)
+                    .font(.system(.body, weight: .medium))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
-                    Spacer()
-
-                    HStack(spacing: 2) {
-                        HoverButton("Kill", role: .destructive) { killWithAnimation() }
-                        HoverButton("Open") {
-                            NSWorkspace.shared.open(entry.url)
-                        }
+                if !group.branch.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "arrow.triangle.branch")
+                        Text(group.branch)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
                     }
-                    .opacity(isHovered ? 1 : 0)
-                    .scaleEffect(isHovered ? 1 : 0.85, anchor: .trailing)
-                    .offset(x: isHovered ? 0 : 6)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 }
 
-                HStack(spacing: 6) {
-                    if !entry.branch.isEmpty {
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.triangle.branch")
-                            Text(entry.branch)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
+                Spacer()
 
-                    Text(":\(String(entry.port))")
-                        .fontDesign(.monospaced)
+                if group.entries.count > 1 {
+                    Text("\(group.entries.count) ports")
+                        .font(.caption)
                         .foregroundStyle(.tertiary)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
 
-                    Spacer()
+            ForEach(group.entries) { entry in
+                PortRow(entry: entry)
+            }
+        }
+    }
+}
 
-                    if let start = entry.startTime {
-                        Text(formatUptime(from: start))
-                            .foregroundStyle(.tertiary)
+// MARK: - Port Row
+
+struct PortRow: View {
+    let entry: ActivePort
+    @Environment(PortStore.self) private var store
+    @State private var isHovered = false
+    @State private var slidOut = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Divider()
+                .padding(.horizontal, 16)
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(":\(String(entry.port))")
+                    .font(.system(.body, weight: .medium))
+                    .fontDesign(.monospaced)
+
+                Spacer()
+
+                if let start = entry.startTime {
+                    Text(formatUptime(from: start))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+
+                HStack(spacing: 2) {
+                    HoverButton("Kill", role: .destructive) { killWithAnimation() }
+                    HoverButton("Open") {
+                        NSWorkspace.shared.open(entry.url)
                     }
                 }
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .opacity(isHovered ? 1 : 0)
+                .scaleEffect(isHovered ? 1 : 0.85, anchor: .trailing)
+                .offset(x: isHovered ? 0 : 6)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)

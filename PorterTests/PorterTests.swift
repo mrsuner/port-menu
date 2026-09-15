@@ -167,6 +167,50 @@ struct ActivePortTests {
     }
 }
 
+// MARK: - Project Port Grouping Tests
+
+struct ProjectPortGroupingTests {
+
+    @Test func groupsPortsFromTheSameProjectAndSortsTheirPorts() {
+        let entries = [
+            ActivePort(port: 8080, pid: 2, projectName: "app", projectIdentifier: "/work/app", branch: "main", startTime: nil),
+            ActivePort(port: 3000, pid: 1, projectName: "app", projectIdentifier: "/work/app", branch: "main", startTime: nil),
+            ActivePort(port: 5173, pid: 3, projectName: "api", projectIdentifier: "/work/api", branch: "develop", startTime: nil)
+        ]
+
+        let groups = entries.groupedByProject()
+
+        #expect(groups.count == 2)
+        #expect(groups[0].projectName == "api")
+        #expect(groups[1].projectName == "app")
+        #expect(groups[1].entries.map(\.port) == [3000, 8080])
+    }
+
+    @Test func doesNotMergeProjectsWithTheSameDisplayName() {
+        let entries = [
+            ActivePort(port: 3000, pid: 1, projectName: "web", projectIdentifier: "/work/client/web", branch: "main", startTime: nil),
+            ActivePort(port: 5173, pid: 2, projectName: "web", projectIdentifier: "/work/admin/web", branch: "main", startTime: nil)
+        ]
+
+        let groups = entries.groupedByProject()
+
+        #expect(groups.count == 2)
+        #expect(groups.map(\.id) == ["/work/admin/web", "/work/client/web"])
+    }
+
+    @Test func usesTheProvidedFallbackIdentityForNonGitProcesses() {
+        let entries = [
+            ActivePort(port: 3000, pid: 1, projectName: "python", projectIdentifier: "/work/service", branch: "", startTime: nil),
+            ActivePort(port: 8000, pid: 2, projectName: "python", projectIdentifier: "/work/service", branch: "", startTime: nil)
+        ]
+
+        let groups = entries.groupedByProject()
+
+        #expect(groups.count == 1)
+        #expect(groups[0].entries.map(\.port) == [3000, 8000])
+    }
+}
+
 // MARK: - FakeScanner Tests
 
 struct FakeScannerTests {

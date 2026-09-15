@@ -241,6 +241,7 @@ struct LivePortScanner: PortScanning {
                 port: info.port,
                 pid: info.pid,
                 projectName: projectName,
+                projectIdentifier: rootPath ?? cwd ?? "process:\(info.processName)",
                 branch: rootPath.flatMap { branches[$0] } ?? "",
                 startTime: startTimes[info.pid]
             )
