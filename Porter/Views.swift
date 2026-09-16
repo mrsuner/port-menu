@@ -341,6 +341,7 @@ struct PortErrorStateView: View {
 
 struct ProjectPortGroupView: View {
     @Environment(PortStore.self) private var store
+    @State private var isShowingKillConfirmation = false
     let group: ProjectPortGroup
     let showTopDivider: Bool
     let isCollapsed: Bool
@@ -397,7 +398,7 @@ struct ProjectPortGroupView: View {
                 .accessibilityHint(isCollapsed ? "Expand ports" : "Collapse ports")
 
                 HoverButton("Kill", role: .destructive) {
-                    confirmAndKillGroup()
+                    isShowingKillConfirmation = true
                 }
                 .accessibilityLabel("Kill all servers in \(group.projectName)")
             }
@@ -405,24 +406,42 @@ struct ProjectPortGroupView: View {
             .padding(.top, 8)
             .padding(.bottom, 4)
 
+            if isShowingKillConfirmation {
+                HStack(spacing: 8) {
+                    Text("Stop \(group.entries.count) \(group.entries.count == 1 ? "server" : "servers")?")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    Button("Cancel") {
+                        isShowingKillConfirmation = false
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+
+                    Button(
+                        "Kill \(group.entries.count)",
+                        role: .destructive
+                    ) {
+                        isShowingKillConfirmation = false
+                        store.killProcesses(inProjectWithIdentifier: group.id)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .tint(.red)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 8)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
             if !isCollapsed {
                 ForEach(group.entries) { entry in
                     PortRow(entry: entry)
                 }
             }
         }
-    }
-
-    private func confirmAndKillGroup() {
-        let alert = NSAlert()
-        alert.messageText = "Kill servers in \(group.projectName)?"
-        alert.informativeText = "This will stop \(group.entries.count) \(group.entries.count == 1 ? "server" : "servers") in this project."
-        alert.addButton(withTitle: "Kill \(group.entries.count) \(group.entries.count == 1 ? "Server" : "Servers")")
-        alert.addButton(withTitle: "Cancel")
-        alert.alertStyle = .warning
-
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        store.killProcesses(inProjectWithIdentifier: group.id)
     }
 }
 
